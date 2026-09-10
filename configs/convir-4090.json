@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "host": "convir-4090",
+  "workspace": {
+    "root": "/sda/home/wangyuxin/Dehaze",
+    "repo": "/sda/home/wangyuxin/Dehaze/repo",
+    "runs": "/sda/home/wangyuxin/Dehaze/runs",
+    "cache": "/sda/home/wangyuxin/Dehaze/cache",
+    "logs": "/sda/home/wangyuxin/Dehaze/logs"
+  },
+  "paths": [
+    {
+      "id": "python",
+      "kind": "executable",
+      "path": "/sda/home/wangyuxin/ConvIR-B/envs/convir-cu121/bin/python",
+      "required": true
+    },
+    {
+      "id": "haze4k",
+      "kind": "directory",
+      "path": "/sda/home/wangyuxin/ConvIR-B/datasets/Haze4K/Haze4K",
+      "required": true
+    },
+    {
+      "id": "wd0375_train_cache",
+      "kind": "directory",
+      "path": "/sda/home/wangyuxin/ConvIR-B/runtime_cache/v24_c12_wd0375_teacher/train_core",
+      "required": false
+    },
+    {
+      "id": "legacy_visual_exports",
+      "kind": "directory",
+      "path": "/sda/home/wangyuxin/ConvIR-B/repos/ConvIR-B-v22-c9-fixed-wdmamba-router-locked/experience_docx/experiment_logs/haze4k_visual_exports_alpha_best_over_anchor_expert_20260617/visuals",
+      "required": false
+    }
+  ],
+  "git_sources": [
+    {
+      "id": "convir_a0",
+      "path": "/sda/home/wangyuxin/ConvIR-B/repos/ConvIR-B-official-arch-anchor",
+      "commit": "3b4da35440c8c26a7d1bcaf1daf342e11d9a3898"
+    },
+    {
+      "id": "wdmamba",
+      "path": "/sda/home/wangyuxin/ConvIR-B/repos/external_experts/WDMamba",
+      "commit": "f3b13952f31d30bd945934b845b39cf96152beeb"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "convir_a0_haze4k",
+      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/official/Haze4K/haze4k-base.pkl",
+      "sha256": "6f42037d57a4e3de3a10ac0ab909d66a3415864a19433c29204a975f4efa4088"
+    },
+    {
+      "id": "wdmamba_haze4k",
+      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/WDMamba_ckpts/haze4k_35.88.pth",
+      "sha256": "57ff24c3791e593f0172607fea66252a8ba5475ab0e417f4cf48e72b4c9a36da"
+    },
+    {
+      "id": "fsnet_udp_haze4k",
+      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/udpnet/FSNet_UDPNet_haze4k.ckpt",
+      "sha256": "25cc334f44c2fac979baad7f158526c9f8d751c21ea282974b0e4d9791fc0a27"
+    },
+    {
+      "id": "mb_taylor_v2_l_haze4k",
+      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/mb-taylorformerv2/HAZE4K-L.pth",
+      "sha256": "954229a6862cd7058c8769a9362a88f9ef2ef132664a1b05e7f7f204b617f2f9"
+    }
+  ],
+  "route": {
+    "baseline": "convir_a0",
+    "primary_expert": "wdmamba",
+    "primary_profile": "WD0375",
+    "alpha_grid": [0.0, 0.125, 0.25, 0.375, 0.5, 0.75, 1.0],
+    "formula": "candidate = A0 + alpha * (expert - A0)"
+  }
+}
