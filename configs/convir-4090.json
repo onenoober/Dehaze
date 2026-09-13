@@ -58,6 +58,11 @@
       "sha256": "57ff24c3791e593f0172607fea66252a8ba5475ab0e417f4cf48e72b4c9a36da"
     },
     {
+      "id": "wdmamba_reside6k",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/wdmamba/reside-6k/reside6k_32.15.pth",
+      "sha256": "9dc852540db5c1d2b04cfa689acda994d4dcf3e2cbb820a5da49db1ba4073a35"
+    },
+    {
       "id": "fsnet_udp_haze4k",
       "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/udpnet/FSNet_UDPNet_haze4k.ckpt",
       "sha256": "25cc334f44c2fac979baad7f158526c9f8d751c21ea282974b0e4d9791fc0a27"
