@@ -302,6 +302,39 @@ def infer_a0(model: Any, image: torch.Tensor) -> torch.Tensor:
     return torch.clamp(output[:, :, :height, :width], 0, 1)
 
 
+def infer_a0_tiled(
+    model: Any,
+    image: torch.Tensor,
+    tile_size: int,
+    tile_pad: int,
+) -> torch.Tensor:
+    """Run ConvIR on overlapping tiles and stitch only each tile's core.
+
+    ConvIR's dynamic filters materialize an ``unfold`` tensor whose memory is
+    proportional to the input canvas.  This explicit mode is used only for
+    high-resolution real-haze inputs that do not fit as a whole image.
+    """
+    if tile_size <= 0:
+        return infer_a0(model, image)
+    _, _, height, width = image.shape
+    output = torch.zeros_like(image)
+    weights = torch.zeros((1, 1, height, width), dtype=image.dtype, device=image.device)
+    for top in range(0, height, tile_size):
+        bottom = min(top + tile_size, height)
+        for left in range(0, width, tile_size):
+            right = min(left + tile_size, width)
+            top_pad = max(0, top - tile_pad)
+            bottom_pad = min(height, bottom + tile_pad)
+            left_pad = max(0, left - tile_pad)
+            right_pad = min(width, right + tile_pad)
+            tile = image[:, :, top_pad:bottom_pad, left_pad:right_pad]
+            tile_output = infer_a0(model, tile)
+            core = tile_output[:, :, top - top_pad:bottom - top_pad, left - left_pad:right - left_pad]
+            output[:, :, top:bottom, left:right] += core
+            weights[:, :, top:bottom, left:right] += 1
+    return output / weights.clamp_min(1)
+
+
 def infer_wdmamba(model: Any, image: torch.Tensor) -> torch.Tensor:
     _, _, height, width = image.shape
     padded, _, _ = pad_to(image, 4)
@@ -384,7 +417,12 @@ def run_evaluation(args: argparse.Namespace) -> None:
             else "pytorch_msssim default Gaussian SSIM on adaptive_avg_pool2d to (h//d,w//d), d=max(1,round(min(h,w)/256)), RGB, data_range=1"
         ),
         "ssim_reference_factor": args.ssim_reference_factor,
-        "inference_protocol": "FP32, batch=1, no TTA/tiling; reflect-pad ConvIR to 32 and WDMamba to 4, crop to input size; clamp both outputs to [0,1] before blending",
+        "inference_protocol": (
+            "FP32, batch=1, no TTA; "
+            + (f"ConvIR overlap tiles of {args.a0_tile_size} with pad {args.a0_tile_pad}; " if args.a0_tile_size else "no ConvIR tiling; ")
+            + "reflect-pad ConvIR tiles to 32 and WDMamba to 4, crop to input size; clamp both outputs to [0,1] before blending"
+        ),
+        "a0_tiling": {"enabled": args.a0_tile_size > 0, "tile_size": args.a0_tile_size, "tile_pad": args.a0_tile_pad},
         "selection_policy": "fixed prespecified alpha grid; no training or checkpoint/alpha selection on SOTS; grid maxima descriptive only",
         "a0_checkpoint": str(args.a0_checkpoint), "a0_sha256": sha256(args.a0_checkpoint),
         "wdmamba_checkpoint": str(args.wdmamba_checkpoint), "wdmamba_sha256": sha256(args.wdmamba_checkpoint),
@@ -411,7 +449,7 @@ def run_evaluation(args: argparse.Namespace) -> None:
         original_label_height, original_label_width = label.shape[-2:]
         label = align_gt(label, tuple(hazy.shape[-2:]), args.gt_border, args.resize_gt)
         with torch.no_grad():
-            a0_pred = infer_a0(a0, hazy)
+            a0_pred = infer_a0_tiled(a0, hazy, args.a0_tile_size, args.a0_tile_pad)
             expert_pred = infer_wdmamba(wdmamba, hazy)
         native_size = tuple(hazy.shape[-2:])
         grid_ssim_size = padded_size(native_size, args.ssim_reference_factor)
@@ -469,6 +507,10 @@ def evaluate(args: argparse.Namespace) -> None:
         raise ValueError("GT border must be nonnegative and cannot be combined with resizing")
     if args.max_images < 0 or args.expected_count < 0 or args.print_freq < 1:
         raise ValueError("invalid image count or print frequency")
+    args.a0_tile_size = getattr(args, "a0_tile_size", 0)
+    args.a0_tile_pad = getattr(args, "a0_tile_pad", 64)
+    if args.a0_tile_size < 0 or args.a0_tile_pad < 0 or (args.a0_tile_size and args.a0_tile_size < 32):
+        raise ValueError("invalid ConvIR tile size or pad")
     if any(not math.isfinite(a) or not 0 <= a <= 1 for a in args.alphas):
         raise ValueError("alpha grid must contain finite values in [0,1]")
     args.out_dir.mkdir(parents=True, exist_ok=False)
@@ -518,6 +560,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--print-freq", type=int, default=10)
     parser.add_argument("--device", default="")
+    parser.add_argument(
+        "--a0-tile-size",
+        type=int,
+        default=0,
+        help="tile ConvIR inference at this core size; 0 keeps whole-image inference",
+    )
+    parser.add_argument(
+        "--a0-tile-pad",
+        type=int,
+        default=64,
+        help="overlap context around each ConvIR tile when --a0-tile-size is enabled",
+    )
     parser.add_argument("--save-images", action="store_true")
     parser.add_argument(
         "--resize-gt",
