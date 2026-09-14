@@ -44,6 +44,12 @@ The historical development-safe candidate sets are WDMamba `0.125-0.5`,
 FSNet+UDP `0.125-0.75`, and MB-Taylor `0.125`. Full endpoint rows remain useful
 negative controls.
 
+For the completed real-haze alpha grid, NH-HAZE and Dense-Haze run whole-image
+FP32 inference. The original O-HAZE files are high resolution and exceed the
+24 GiB ConvIR whole-image memory path, so its reproducible run explicitly uses
+ConvIR overlap tiles (`1024` core, `64` context pad). This option is recorded
+in the O-HAZE manifest and is not enabled by default for other datasets.
+
 ## Evaluation Roles
 
 Historical Haze4K test metrics are already known. A rerun on that split is a

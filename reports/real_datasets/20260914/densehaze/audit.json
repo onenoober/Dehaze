@@ -1,0 +1,31 @@
+{
+  "a0_checkpoint_sha256": "9efb59941f77575402224ab752d054112a9b52a8605d3793584d6ce224083d4f",
+  "a0_tiling": null,
+  "all_checks_pass": true,
+  "alpha_grid": [
+    0.0,
+    0.125,
+    0.25,
+    0.375,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "alpha_grid_exact": true,
+  "alpha_grid_sha256": "6f539b06a75cf16acbc46763afd80a5d9839cb1c0aae262c81940e6e203e67e4",
+  "alpha_rows": 7,
+  "dataset": "densehaze",
+  "evaluation_status": "DEHAZE_WDMAMBA_EVAL_OK",
+  "evaluator_sha256": "20f9895dbcb937d2df3424acdd750cf9562f8831802128e30c5b6988df5d205e",
+  "expected_count": 55,
+  "manifest_count": 55,
+  "manifest_state": "COMPLETE",
+  "numeric_fields_finite": true,
+  "pairs_rows": 55,
+  "pairs_sha256": "896964c5d9039b8b7438fc05fce7b23df5b3452e76e172c16e2d9ed6f1c5c2e2",
+  "per_image_rows": 55,
+  "per_image_sha256": "5d5df62d97d303651ec86f127556c185e0c3178f26615b4508119e6b21b3e9d9",
+  "run_root": "/sda/home/wangyuxin/Dehaze/runs/densehaze-full-57b822d-20260914",
+  "status": "DEHAZE_REAL_DATASET_RUN_OK",
+  "wdmamba_checkpoint_sha256": "0754cb37dcb0133ce5fc07c11bf0224ca878cc1bfb338ce90116baa662eb9308"
+}

@@ -75,6 +75,12 @@ For complete SOTS Indoor/Outdoor runs, use `tools/run_sots.sh` and follow
 `--gt-border 10`; do not resize its GT. The launcher captures logs and commands,
 requires all 500 source pairs, and refuses to overwrite an existing run.
 
+The completed NH-HAZE, Dense-Haze, and O-HAZE alpha-grid results are archived
+in [reports/real_datasets/20260914/REAL_DATASET_RESULTS.md](reports/real_datasets/20260914/REAL_DATASET_RESULTS.md).
+O-HAZE's high-resolution source requires the evaluator's explicit ConvIR
+overlap-tile options (`--a0-tile-size 1024 --a0-tile-pad 64`); the default
+remains whole-image inference.
+
 To reproduce the historical 1,000-image Haze4K test alpha grid, use
 `tools/run_haze4k.sh`. It selects the original Haze4K checkpoints and explicitly
 enables the v2.10-compatible 32-grid SSIM convention and historical CUDA backend
