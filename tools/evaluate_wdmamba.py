@@ -319,10 +319,18 @@ def infer_a0_tiled(
     _, _, height, width = image.shape
     output = torch.zeros_like(image)
     weights = torch.zeros((1, 1, height, width), dtype=image.dtype, device=image.device)
-    for top in range(0, height, tile_size):
-        bottom = min(top + tile_size, height)
-        for left in range(0, width, tile_size):
-            right = min(left + tile_size, width)
+    def starts(length: int) -> list[int]:
+        if length <= tile_size:
+            return [0]
+        values = list(range(0, length - tile_size + 1, tile_size))
+        if values[-1] != length - tile_size:
+            values.append(length - tile_size)
+        return values
+
+    for top in starts(height):
+        bottom = top + min(tile_size, height)
+        for left in starts(width):
+            right = left + min(tile_size, width)
             top_pad = max(0, top - tile_pad)
             bottom_pad = min(height, bottom + tile_pad)
             left_pad = max(0, left - tile_pad)
@@ -509,7 +517,7 @@ def evaluate(args: argparse.Namespace) -> None:
         raise ValueError("invalid image count or print frequency")
     args.a0_tile_size = getattr(args, "a0_tile_size", 0)
     args.a0_tile_pad = getattr(args, "a0_tile_pad", 64)
-    if args.a0_tile_size < 0 or args.a0_tile_pad < 0 or (args.a0_tile_size and args.a0_tile_size < 32):
+    if args.a0_tile_size < 0 or args.a0_tile_pad < 0 or (args.a0_tile_size and args.a0_tile_size < 128):
         raise ValueError("invalid ConvIR tile size or pad")
     if any(not math.isfinite(a) or not 0 <= a <= 1 for a in args.alphas):
         raise ValueError("alpha grid must contain finite values in [0,1]")
