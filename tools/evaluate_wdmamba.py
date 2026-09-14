@@ -129,8 +129,12 @@ def gt_candidates(name: str) -> Iterable[str]:
     yield from add(name)
     yield from add(f"{stem}.png")
     if "_hazy" in stem.lower():
-        yield from add(f"{stem.lower().replace('_hazy', '_GT')}.png")
-        yield from add(f"{stem.lower().replace('_hazy', '_gt')}.png")
+        clean_stem = stem.lower().replace("_hazy", "_GT")
+        yield from add(f"{clean_stem}{suffix}")
+        yield from add(f"{clean_stem}.png")
+        yield from add(f"{clean_stem}.jpg")
+        yield from add(f"{clean_stem}.jpeg")
+        yield from add(f"{clean_stem.upper()}{suffix.upper()}")
     if "_gt" in stem.lower():
         yield from add(f"{stem.lower().replace('_gt', '_hazy')}{suffix}")
     if "_" in stem:

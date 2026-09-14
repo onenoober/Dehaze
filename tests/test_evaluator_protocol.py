@@ -48,6 +48,17 @@ class EvaluationProtocolTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 pair_paths(hazy, gt, limit=1)
 
+    def test_jpg_real_haze_gt_pairing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            hazy, gt = root / "hazy", root / "gt"
+            hazy.mkdir()
+            gt.mkdir()
+            Image.new("RGB", (32, 32)).save(hazy / "03_outdoor_hazy.JPG")
+            Image.new("RGB", (32, 32)).save(gt / "03_outdoor_GT.JPG")
+            pairs = pair_paths(hazy, gt, expected_count=1)
+            self.assertEqual(pairs[0][1].name, "03_outdoor_GT.JPG")
+
     def test_empty_dataset_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaises(RuntimeError):
