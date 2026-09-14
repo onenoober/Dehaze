@@ -1,0 +1,31 @@
+{
+  "alpha_grid_count": 7,
+  "decode_or_geometry_error_count": 0,
+  "evaluation_status": "DEHAZE_WDMAMBA_EVAL_OK",
+  "first_errors": [],
+  "manifest_count": 500,
+  "manifest_sha256": "9b193ee42336b2ab98d275bae2f4403c3b4b14788fe0dd7d15b8c2819e151044",
+  "manifest_state": "COMPLETE",
+  "marker": "DEHAZE_SOTS_OUTPUT_AUDIT_OK",
+  "per_image_count": 500,
+  "png_counts": {
+    "A0": 500,
+    "WD0375": 500,
+    "WDMamba": 500,
+    "alpha0.125": 500,
+    "alpha0.25": 500,
+    "alpha0.5": 500,
+    "alpha0.75": 500
+  },
+  "png_total_bytes": 1260652756,
+  "png_total_count": 3500,
+  "run_log_sha256": "32ff9dc5d53a21479ce9ff02964050878d2833a135ed3c2842091835733c1e16",
+  "run_status": "DEHAZE_SOTS_RUN_OK",
+  "schema_version": 1,
+  "sha256": {
+    "alpha_grid.csv": "9e5fc6baa92dd42c5b31bea414517507597c6d6242cb0f4f86dcb2bc3bc1f3e7",
+    "pairs.csv": "75ba7276c2e3ded14de6e450ed9b185bcf0be8cc4ce90ac58b85608f427257d1",
+    "per_image.csv": "8de6367103f7f1d3479d06b35a47e8f3865eb50e3cd4566cc5f2a66479e54d96"
+  },
+  "split": "indoor"
+}
