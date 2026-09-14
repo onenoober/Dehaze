@@ -63,6 +63,11 @@ For RESIDE or NH-HAZE, pass `--input-dir` and `--gt-dir` explicitly when the
 dataset uses a flat or symlinked layout. `--max-images 1` is useful for a
 cloud smoke check before a full run.
 
+For complete SOTS Indoor/Outdoor runs, use `tools/run_sots.sh` and follow
+[docs/SOTS_PROTOCOL.md](docs/SOTS_PROTOCOL.md). Original SOTS Indoor requires
+`--gt-border 10`; do not resize its GT. The launcher captures logs and commands,
+requires all 500 source pairs, and refuses to overwrite an existing run.
+
 See [docs/ROUTE.md](docs/ROUTE.md) for the staged experiment design and
 [docs/LEGACY_RESULTS.md](docs/LEGACY_RESULTS.md) for the reusable historical
 evidence.

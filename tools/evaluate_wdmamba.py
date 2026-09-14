@@ -15,9 +15,13 @@ import hashlib
 import importlib.util
 import json
 import math
+import os
+import random
 import statistics
+import subprocess
 import sys
 import time
+import traceback
 import types
 from pathlib import Path
 from typing import Any, Iterable
@@ -125,7 +129,7 @@ def gt_candidates(name: str) -> Iterable[str]:
         yield from add(f"{numeric.zfill(4)}.png")
 
 
-def pair_paths(input_dir: Path, gt_dir: Path, limit: int = 0) -> list[tuple[Path, Path]]:
+def pair_paths(input_dir: Path, gt_dir: Path, limit: int = 0, expected_count: int = 0) -> list[tuple[Path, Path]]:
     inputs = image_files(input_dir)
     gt_map = {path.name: path for path in image_files(gt_dir)}
     pairs: list[tuple[Path, Path]] = []
@@ -136,16 +140,56 @@ def pair_paths(input_dir: Path, gt_dir: Path, limit: int = 0) -> list[tuple[Path
             missing.append(input_path.name)
         else:
             pairs.append((input_path, gt_path))
-        if limit > 0 and len(pairs) >= limit:
-            break
-    if missing and not pairs:
-        raise RuntimeError(f"no input/GT pairs found; first missing={missing[:5]}")
-    if missing and len(missing) > max(5, len(inputs) // 2):
-        raise RuntimeError(
-            f"only {len(pairs)} pairs found from {len(inputs)} inputs; "
-            f"first missing={missing[:5]}"
-        )
-    return pairs
+    if missing or not pairs:
+        raise RuntimeError(f"incomplete pairing: {len(pairs)}/{len(inputs)}; first missing={missing[:5]}")
+    if expected_count and len(pairs) != expected_count:
+        raise RuntimeError(f"expected {expected_count} pairs, found {len(pairs)}")
+    if len({path.stem for path, _ in pairs}) != len(pairs):
+        raise RuntimeError("duplicate input stems would overwrite output images")
+    return pairs[:limit] if limit > 0 else pairs
+
+
+def align_gt(label: torch.Tensor, size: tuple[int, int], border: int, resize: bool) -> torch.Tensor:
+    if border:
+        label = label[:, :, border:-border, border:-border]
+    if tuple(label.shape[-2:]) != tuple(size):
+        if not resize:
+            raise ValueError(f"input/GT size mismatch after border={border}: input={size}, gt={tuple(label.shape[-2:])}")
+        label = F.interpolate(label, size=size, mode="bilinear", align_corners=False)
+    return label
+
+
+def audit_pairs(pairs: list[tuple[Path, Path]], border: int, resize: bool) -> list[dict[str, Any]]:
+    """Decode and bind every selected file before loading either model."""
+    files: dict[Path, dict[str, Any]] = {}
+    records = []
+    for input_path, gt_path in pairs:
+        for path in (input_path, gt_path):
+            if path not in files:
+                with Image.open(path) as image:
+                    image.load()
+                    files[path] = {"size": image.size, "sha256": sha256(path)}
+        width, height = files[input_path]["size"]
+        gt_width, gt_height = files[gt_path]["size"]
+        aligned_size = (gt_width - 2 * border, gt_height - 2 * border)
+        if min(aligned_size) <= 0 or (not resize and aligned_size != (width, height)):
+            raise ValueError(f"invalid GT alignment for {input_path.name}: input={(width, height)}, GT={(gt_width, gt_height)}, border={border}")
+        records.append({
+            "input": str(input_path), "gt": str(gt_path),
+            "input_sha256": files[input_path]["sha256"], "gt_sha256": files[gt_path]["sha256"],
+            "width": width, "height": height, "gt_width": gt_width, "gt_height": gt_height,
+        })
+    return records
+
+
+def git_identity(path: Path) -> dict[str, str]:
+    def git(*args: str) -> str:
+        return subprocess.check_output(["git", "-C", str(path), *args], text=True).strip()
+    return {"commit": git("rev-parse", "HEAD"), "tracked_changes": git("status", "--porcelain", "--untracked-files=no")}
+
+
+def write_json(path: Path, value: Any) -> None:
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def resolve_dirs(data_root: Path, split: str, input_dir: str | None, gt_dir: str | None) -> tuple[Path, Path]:
@@ -285,30 +329,58 @@ def summarize(rows: list[dict[str, Any]], alphas: list[float]) -> list[dict[str,
     return summaries
 
 
-def evaluate(args: argparse.Namespace) -> None:
+def run_evaluation(args: argparse.Namespace) -> None:
     output_root = args.out_dir
-    output_root.mkdir(parents=True, exist_ok=True)
     input_dir, gt_dir = resolve_dirs(args.data_root, args.split, args.input_dir, args.gt_dir)
-    pairs = pair_paths(input_dir, gt_dir, args.max_images)
+    pairs = pair_paths(input_dir, gt_dir, args.max_images, args.expected_count)
+    records = audit_pairs(pairs, args.gt_border, args.resize_gt)
+    write_csv(output_root / "metrics" / "pairs.csv", records)
     device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
+    random.seed(0)
+    torch.manual_seed(0)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    alphas = sorted({round(float(value), 6) for value in args.alphas})
+    manifest = {
+        "state": "MODEL_LOADING", "mode": "evaluate", "dataset": args.dataset_name,
+        "split": args.split, "input_dir": str(input_dir), "gt_dir": str(gt_dir),
+        "planned_count": len(pairs), "expected_source_count": args.expected_count,
+        "alpha_grid": alphas, "device": str(device), "seed": 0,
+        "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+        "gpu": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
+        "torch_version": torch.__version__, "cuda_version": torch.version.cuda,
+        "tf32": False, "cudnn_benchmark": False, "cudnn_deterministic": True,
+        "gt_border": args.gt_border, "resize_gt": args.resize_gt,
+        "psnr_protocol": "mean per-image RGB float32 PSNR, native resolution, MSE floor 1e-12, data_range=1",
+        "ssim_protocol": "pytorch_msssim default Gaussian SSIM on adaptive_avg_pool2d to (h//d,w//d), d=max(1,round(min(h,w)/256)), RGB, data_range=1",
+        "inference_protocol": "FP32, batch=1, no TTA/tiling; reflect-pad ConvIR to 32 and WDMamba to 4, crop to input size; clamp both outputs to [0,1] before blending",
+        "selection_policy": "fixed prespecified alpha grid; no training or checkpoint/alpha selection on SOTS; grid maxima descriptive only",
+        "a0_checkpoint": str(args.a0_checkpoint), "a0_sha256": sha256(args.a0_checkpoint),
+        "wdmamba_checkpoint": str(args.wdmamba_checkpoint), "wdmamba_sha256": sha256(args.wdmamba_checkpoint),
+        "convir_dataset": args.convir_dataset, "convir_its_dir": str(args.convir_its_dir),
+        "wdmamba_repo": str(args.wdmamba_repo),
+        "sources": {"evaluator": git_identity(Path(__file__).resolve().parent),
+                    "convir": git_identity(args.convir_its_dir), "wdmamba": git_identity(args.wdmamba_repo)},
+        "evaluator_sha256": sha256(Path(__file__)),
+        "pairs_csv_sha256": sha256(output_root / "metrics" / "pairs.csv"),
+        "argv": sys.argv, "save_images": args.save_images,
+    }
+    write_json(output_root / "manifest.json", manifest)
+    (output_root / "status.txt").write_text("MODEL_LOADING\n", encoding="utf-8")
     build_net = load_convir_builders(args.convir_its_dir)
     a0 = load_a0(build_net, args.a0_checkpoint, args.convir_dataset, device)
     wdmamba, wdmamba_de_blocks = load_wdmamba(args.wdmamba_repo, args.wdmamba_checkpoint, device)
-    alphas = sorted({round(float(value), 6) for value in args.alphas})
+    manifest.update(state="EVALUATING", wdmamba_de_blocks=wdmamba_de_blocks)
+    write_json(output_root / "manifest.json", manifest)
     rows: list[dict[str, Any]] = []
     started = time.time()
     for index, (input_path, gt_path) in enumerate(pairs, 1):
         hazy = TVF.to_tensor(Image.open(input_path).convert("RGB")).unsqueeze(0).to(device)
         label = TVF.to_tensor(Image.open(gt_path).convert("RGB")).unsqueeze(0).to(device)
-        label_height, label_width = label.shape[-2:]
-        if label.shape[-2:] != hazy.shape[-2:]:
-            if not args.resize_gt:
-                raise ValueError(
-                    f"input/GT size mismatch for {input_path.name}: "
-                    f"input={tuple(hazy.shape[-2:])}, gt={tuple(label.shape[-2:])}; "
-                    "pass --resize-gt only when the dataset protocol requires it"
-                )
-            label = F.interpolate(label, size=hazy.shape[-2:], mode="bilinear", align_corners=False)
+        original_label_height, original_label_width = label.shape[-2:]
+        label = align_gt(label, tuple(hazy.shape[-2:]), args.gt_border, args.resize_gt)
         with torch.no_grad():
             a0_pred = infer_a0(a0, hazy)
             expert_pred = infer_wdmamba(wdmamba, hazy)
@@ -320,9 +392,10 @@ def evaluate(args: argparse.Namespace) -> None:
             "gt": str(gt_path),
             "width": hazy.shape[-1],
             "height": hazy.shape[-2],
-            "gt_width": label_width,
-            "gt_height": label_height,
-            "gt_resized": bool((label_height, label_width) != tuple(hazy.shape[-2:])),
+            "gt_width": original_label_width,
+            "gt_height": original_label_height,
+            "gt_border": args.gt_border,
+            "gt_resized": bool(args.resize_gt and (original_label_height, original_label_width) != tuple(hazy.shape[-2:])),
             "A0_PSNR": a0_psnr,
             "A0_SSIM": a0_ssim,
             "WDMamba_PSNR": expert_psnr,
@@ -332,8 +405,15 @@ def evaluate(args: argparse.Namespace) -> None:
         }
         for alpha in alphas:
             key = alpha_key(alpha)
-            prediction = torch.clamp(a0_pred + alpha * (expert_pred - a0_pred), 0, 1)
-            psnr, score = metric_pair(prediction, label)
+            if alpha == 0.0:
+                prediction, psnr, score = a0_pred, a0_psnr, a0_ssim
+            elif alpha == 1.0:
+                prediction, psnr, score = expert_pred, expert_psnr, expert_ssim
+            else:
+                prediction = torch.clamp(a0_pred + alpha * (expert_pred - a0_pred), 0, 1)
+                psnr, score = metric_pair(prediction, label)
+            if not math.isfinite(psnr) or not math.isfinite(score):
+                raise FloatingPointError(f"non-finite metric: {input_path.name} alpha={alpha}")
             row[f"alpha_{key}_PSNR"] = psnr
             row[f"alpha_{key}_SSIM"] = score
             row[f"alpha_{key}_dPSNR"] = psnr - a0_psnr
@@ -341,31 +421,38 @@ def evaluate(args: argparse.Namespace) -> None:
             if args.save_images:
                 save_image(prediction, output_root / "images" / alpha_label(alpha) / f"{input_path.stem}.png")
         rows.append(row)
+        (output_root / "status.txt").write_text(f"EVALUATING progress={index}/{len(pairs)} elapsed={time.time()-started:.1f}s\n", encoding="utf-8")
         if index % args.print_freq == 0 or index == len(pairs):
             print(f"progress={index}/{len(pairs)} elapsed={time.time()-started:.1f}s", flush=True)
     write_csv(output_root / "metrics" / "per_image.csv", rows)
     write_csv(output_root / "metrics" / "alpha_grid.csv", summarize(rows, alphas))
-    manifest = {
-        "mode": "evaluate",
-        "dataset": args.dataset_name,
-        "split": args.split,
-        "input_dir": str(input_dir),
-        "gt_dir": str(gt_dir),
-        "count": len(rows),
-        "alpha_grid": alphas,
-        "device": str(device),
-        "a0_checkpoint": str(args.a0_checkpoint),
-        "a0_sha256": sha256(args.a0_checkpoint),
-        "wdmamba_checkpoint": str(args.wdmamba_checkpoint),
-        "wdmamba_sha256": sha256(args.wdmamba_checkpoint),
-        "wdmamba_de_blocks": wdmamba_de_blocks,
-        "convir_its_dir": str(args.convir_its_dir),
-        "wdmamba_repo": str(args.wdmamba_repo),
-        "elapsed_seconds": time.time() - started,
-    }
-    (output_root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest.update(state="COMPLETE", count=len(rows), elapsed_seconds=time.time()-started)
+    write_json(output_root / "manifest.json", manifest)
     (output_root / "status.txt").write_text("DEHAZE_WDMAMBA_EVAL_OK\n", encoding="utf-8")
     print(f"DEHAZE_WDMAMBA_EVAL_OK count={len(rows)} out={output_root}")
+
+
+def evaluate(args: argparse.Namespace) -> None:
+    if args.gt_border < 0 or (args.gt_border and args.resize_gt):
+        raise ValueError("GT border must be nonnegative and cannot be combined with resizing")
+    if args.max_images < 0 or args.expected_count < 0 or args.print_freq < 1:
+        raise ValueError("invalid image count or print frequency")
+    if any(not math.isfinite(a) or not 0 <= a <= 1 for a in args.alphas):
+        raise ValueError("alpha grid must contain finite values in [0,1]")
+    args.out_dir.mkdir(parents=True, exist_ok=False)
+    (args.out_dir / "status.txt").write_text("PREFLIGHT\n", encoding="utf-8")
+    try:
+        run_evaluation(args)
+    except BaseException:
+        stage = (args.out_dir / "status.txt").read_text(encoding="utf-8").strip()
+        (args.out_dir / "status.txt").write_text(f"FAILED during={stage}\n", encoding="utf-8")
+        (args.out_dir / "failure.txt").write_text(traceback.format_exc(), encoding="utf-8")
+        manifest_path = args.out_dir / "manifest.json"
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest.update(state="FAILED", failed_stage=stage)
+            write_json(manifest_path, manifest)
+        raise
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -383,6 +470,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-name", default="unknown")
     parser.add_argument("--alphas", type=float, nargs="+", default=list(DEFAULT_ALPHAS))
     parser.add_argument("--max-images", type=int, default=0)
+    parser.add_argument("--expected-count", type=int, default=0, help="require this many pairs before applying max-images")
+    parser.add_argument("--gt-border", type=int, default=0, help="crop this many pixels from each GT edge; use 10 for original SOTS Indoor")
     parser.add_argument("--print-freq", type=int, default=10)
     parser.add_argument("--device", default="")
     parser.add_argument("--save-images", action="store_true")

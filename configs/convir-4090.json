@@ -10,6 +10,12 @@
   },
   "paths": [
     {
+      "id": "sots",
+      "kind": "directory",
+      "path": "/sda/home/wangyuxin/ConvIR-B/datasets/RESIDE/official/SOTS",
+      "required": true
+    },
+    {
       "id": "python",
       "kind": "executable",
       "path": "/sda/home/wangyuxin/ConvIR-B/envs/convir-cu121/bin/python",
@@ -47,6 +53,16 @@
     }
   ],
   "checkpoints": [
+    {
+      "id": "convir_its",
+      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/official/its-base.pkl",
+      "sha256": "0c71389bb8e4a602e4548e90c0015941b78698dfbfdd6ddfd46cdd2f61cd1fbd"
+    },
+    {
+      "id": "convir_ots",
+      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/official/ots-base.pkl",
+      "sha256": "dc28713ad92af0a2594b1964451602614e1b24a1e898647a6cf41c94e9e533e6"
+    },
     {
       "id": "convir_a0_haze4k",
       "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/official/Haze4K/haze4k-base.pkl",
