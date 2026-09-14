@@ -1,0 +1,79 @@
+{
+  "A0_PSNR": {
+    "count_lt_1e-6": 1000,
+    "max_abs": 0.0,
+    "mean_abs": 0.0
+  },
+  "A0_SSIM": {
+    "count_lt_1e-6": 1000,
+    "max_abs": 0.0,
+    "mean_abs": 0.0
+  },
+  "WDMamba_PSNR": {
+    "count_lt_1e-6": 1000,
+    "max_abs": 0.0,
+    "mean_abs": 0.0
+  },
+  "WDMamba_SSIM": {
+    "count_lt_1e-6": 1000,
+    "max_abs": 0.0,
+    "mean_abs": 0.0
+  },
+  "alpha_a0p375_PSNR": {
+    "count_lt_1e-6": 1000,
+    "max_abs": 0.0,
+    "mean_abs": 0.0
+  },
+  "alpha_a0p375_SSIM": {
+    "count_lt_1e-6": 1000,
+    "max_abs": 0.0,
+    "mean_abs": 0.0
+  },
+  "current_count": 1000,
+  "current_run": "/sda/home/wangyuxin/Dehaze/runs/haze4k-full-r3-08374fa-20260914",
+  "grid": {
+    "0.0": {
+      "mean_PSNR": 0.0,
+      "mean_SSIM": 0.0,
+      "mean_dPSNR": 0.0
+    },
+    "0.125": {
+      "mean_PSNR": 0.0,
+      "mean_SSIM": 0.0,
+      "mean_dPSNR": 0.0
+    },
+    "0.25": {
+      "mean_PSNR": 0.0,
+      "mean_SSIM": 0.0,
+      "mean_dPSNR": 0.0
+    },
+    "0.375": {
+      "mean_PSNR": 0.0,
+      "mean_SSIM": 0.0,
+      "mean_dPSNR": 0.0
+    },
+    "0.5": {
+      "mean_PSNR": 0.0,
+      "mean_SSIM": 0.0,
+      "mean_dPSNR": 0.0
+    },
+    "0.75": {
+      "mean_PSNR": 0.0,
+      "mean_SSIM": 0.0,
+      "mean_dPSNR": 0.0
+    },
+    "1.0": {
+      "mean_PSNR": 0.0,
+      "mean_SSIM": 0.0,
+      "mean_dPSNR": 0.0
+    }
+  },
+  "marker": "DEHAZE_HAZE4K_PARITY_OK",
+  "matched_count": 1000,
+  "max_abs_grid": 0.0,
+  "parity_pass": true,
+  "reference_v210_grid": "/sda/home/wangyuxin/ConvIR-B/repos/ConvIR-B-v22-c9-fixed-wdmamba-router-locked/experience_docx/experiment_logs/haze4k_v2_10_locked_test_wdmamba_alpha_grid_20260616/v210_haze4k_locked_wdmamba_alpha_grid_compact_metrics.csv",
+  "reference_v22": "/sda/home/wangyuxin/ConvIR-B/repos/ConvIR-B-v22-c9-fixed-wdmamba-router-locked/experience_docx/experiment_logs/haze4k_v2_2_c9_fixed_wdmamba_router_20260615/v22_locked_wd0375_one_shot_per_image.csv",
+  "reference_v22_count": 1000,
+  "schema_version": 1
+}

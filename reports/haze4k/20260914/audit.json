@@ -1,0 +1,18 @@
+{
+  "alpha_grid_count": 7,
+  "audit_pass": true,
+  "evaluation_status": "DEHAZE_WDMAMBA_EVAL_OK",
+  "finite_numeric_fields": true,
+  "manifest_state": "COMPLETE",
+  "marker": "DEHAZE_HAZE4K_OUTPUT_AUDIT_OK",
+  "per_image_count": 1000,
+  "run_status": "DEHAZE_HAZE4K_RUN_OK",
+  "schema_version": 1,
+  "sha256": {
+    "alpha_grid.csv": "24b78d657969bd3ef499aa5361a4d166b734e19a0f474ad84b79df67ae294416",
+    "manifest.json": "ad18b8b2948326a2851f104f183e1134e175752c8a9b3690d0e33c480829c007",
+    "pairs.csv": "7d4daee5cebe3ae58ae22eb511ab0fab6d3b95a0900a9ae5dcd5121ff68d194c",
+    "parity.json": "44d7214d016db5e47fa1c6ee12a2f1042997c2d652c99d1b5af6ea9d88955dfd",
+    "per_image.csv": "0f5b1a5182b662281249e03a841974a72df9c1df19711d3f8e57771ca1a7c267"
+  }
+}
