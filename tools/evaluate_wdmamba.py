@@ -352,10 +352,11 @@ def run_evaluation(args: argparse.Namespace) -> None:
     device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
     random.seed(0)
     torch.manual_seed(0)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32 = False
+    if args.numerics == "strict":
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
     alphas = sorted({round(float(value), 6) for value in args.alphas})
     manifest = {
         "state": "MODEL_LOADING", "mode": "evaluate", "dataset": args.dataset_name,
@@ -365,7 +366,11 @@ def run_evaluation(args: argparse.Namespace) -> None:
         "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
         "gpu": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
         "torch_version": torch.__version__, "cuda_version": torch.version.cuda,
-        "tf32": False, "cudnn_benchmark": False, "cudnn_deterministic": True,
+        "numerics_profile": args.numerics,
+        "tf32_matmul": torch.backends.cuda.matmul.allow_tf32,
+        "tf32_cudnn": torch.backends.cudnn.allow_tf32,
+        "cudnn_benchmark": torch.backends.cudnn.benchmark,
+        "cudnn_deterministic": torch.backends.cudnn.deterministic,
         "gt_border": args.gt_border, "resize_gt": args.resize_gt,
         "psnr_protocol": "mean per-image RGB float32 PSNR, native resolution, MSE floor 1e-12, data_range=1",
         "ssim_protocol": (
@@ -500,6 +505,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help="derive the SSIM pooling grid from input padded to this factor; use 32 for historical Haze4K v2.10 parity",
+    )
+    parser.add_argument(
+        "--numerics",
+        choices=("strict", "historical"),
+        default="strict",
+        help="strict disables TF32 and enables deterministic CuDNN; historical preserves CUDA backend defaults for legacy parity",
     )
     parser.add_argument("--print-freq", type=int, default=10)
     parser.add_argument("--device", default="")

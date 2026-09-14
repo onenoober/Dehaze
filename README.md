@@ -77,8 +77,9 @@ requires all 500 source pairs, and refuses to overwrite an existing run.
 
 To reproduce the historical 1,000-image Haze4K test alpha grid, use
 `tools/run_haze4k.sh`. It selects the original Haze4K checkpoints and explicitly
-enables the v2.10-compatible 32-grid SSIM convention; the evaluator's default
-native-size SSIM remains unchanged for other datasets.
+enables the v2.10-compatible 32-grid SSIM convention and historical CUDA backend
+defaults; the evaluator's default native-size SSIM and strict numeric profile
+remain unchanged for other datasets.
 
 See [docs/ROUTE.md](docs/ROUTE.md) for the staged experiment design and
 [docs/LEGACY_RESULTS.md](docs/LEGACY_RESULTS.md) for the reusable historical

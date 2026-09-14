@@ -25,8 +25,6 @@ export CUDA_VISIBLE_DEVICES="$gpu"
 export OMP_NUM_THREADS=4
 export MKL_NUM_THREADS=4
 export PYTHONUNBUFFERED=1
-export CUDA_LAUNCH_BLOCKING=1
-export CUBLAS_WORKSPACE_CONFIG=:4096:8
 runtime=/sda/home/wangyuxin/ConvIR-B/envs/convir-cu121/bin/python
 assets=/sda/home/wangyuxin/ConvIR-B
 command=("$runtime" "$repo/tools/evaluate_wdmamba.py"
@@ -37,10 +35,10 @@ command=("$runtime" "$repo/tools/evaluate_wdmamba.py"
   --convir-dataset Haze4K --a0-checkpoint "$assets/checkpoints/official/Haze4K/haze4k-base.pkl"
   --wdmamba-repo "$assets/repos/external_experts/WDMamba"
   --wdmamba-checkpoint "$assets/checkpoints/WDMamba_ckpts/haze4k_35.88.pth"
-  --alphas 0 0.125 0.25 0.375 0.5 0.75 1 --ssim-reference-factor 32
+  --alphas 0 0.125 0.25 0.375 0.5 0.75 1 --ssim-reference-factor 32 --numerics historical
   --device cuda:0 --print-freq 20)
 if test "$save_images" = 1; then command+=(--save-images); fi
-printf '#!/usr/bin/env bash\nset -euo pipefail\nexport CUDA_VISIBLE_DEVICES=%q OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONUNBUFFERED=1 CUDA_LAUNCH_BLOCKING=1 CUBLAS_WORKSPACE_CONFIG=:4096:8\n' "$gpu" > "$run_root/command.sh"
+printf '#!/usr/bin/env bash\nset -euo pipefail\nexport CUDA_VISIBLE_DEVICES=%q OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONUNBUFFERED=1\n' "$gpu" > "$run_root/command.sh"
 printf '%q ' "${command[@]}" >> "$run_root/command.sh"
 printf '\n' >> "$run_root/command.sh"
 printf 'RUNNING\n' > "$run_root/status.txt"
