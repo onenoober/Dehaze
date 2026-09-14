@@ -40,6 +40,29 @@ evaluator or launching an experiment:
   tools/check_assets.py --config configs/convir-4090.json
 ```
 
+The independent WDMamba evaluator accepts a paired input/GT directory and
+writes one immutable run directory. For Haze4K, the default `test/haze` and
+`test/gt` layout is sufficient:
+
+```bash
+/sda/home/wangyuxin/ConvIR-B/envs/convir-cu121/bin/python \
+  tools/evaluate_wdmamba.py \
+  --data-root /sda/home/wangyuxin/ConvIR-B/datasets/Haze4K/Haze4K \
+  --split test \
+  --out-dir /sda/home/wangyuxin/Dehaze/runs/wdmamba-haze4k-test-YYYYMMDD \
+  --convir-its-dir /sda/home/wangyuxin/ConvIR-B/repos/ConvIR-B-official-arch-anchor/Dehazing/ITS \
+  --convir-dataset Haze4K \
+  --a0-checkpoint /sda/home/wangyuxin/ConvIR-B/checkpoints/official/Haze4K/haze4k-base.pkl \
+  --wdmamba-repo /sda/home/wangyuxin/ConvIR-B/repos/external_experts/WDMamba \
+  --wdmamba-checkpoint /sda/home/wangyuxin/ConvIR-B/checkpoints/WDMamba_ckpts/haze4k_35.88.pth \
+  --dataset-name Haze4K \
+  --save-images
+```
+
+For RESIDE or NH-HAZE, pass `--input-dir` and `--gt-dir` explicitly when the
+dataset uses a flat or symlinked layout. `--max-images 1` is useful for a
+cloud smoke check before a full run.
+
 See [docs/ROUTE.md](docs/ROUTE.md) for the staged experiment design and
 [docs/LEGACY_RESULTS.md](docs/LEGACY_RESULTS.md) for the reusable historical
 evidence.
