@@ -9,7 +9,7 @@ import torch
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from evaluate_wdmamba import align_gt, audit_pairs, evaluate, pair_paths
+from evaluate_wdmamba import align_gt, audit_pairs, evaluate, metric_pair, padded_size, pair_paths
 
 
 class EvaluationProtocolTests(unittest.TestCase):
@@ -19,6 +19,15 @@ class EvaluationProtocolTests(unittest.TestCase):
         self.assertTrue(torch.equal(actual, gt[:, :, 10:38, 10:54]))
         with self.assertRaises(ValueError):
             align_gt(gt, (28, 44), border=0, resize=False)
+
+    def test_haze4k_grid32_ssim_reference(self):
+        torch.manual_seed(7)
+        pred = torch.rand(1, 3, 400, 400)
+        label = torch.rand(1, 3, 400, 400)
+        self.assertEqual(padded_size((400, 400), 32), (416, 416))
+        native = metric_pair(pred, label)[1]
+        grid32 = metric_pair(pred, label, padded_size((400, 400), 32))[1]
+        self.assertNotEqual(native, grid32)
 
     def test_pairing_census_and_geometry_before_smoke_limit(self):
         with tempfile.TemporaryDirectory() as temp:

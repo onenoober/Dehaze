@@ -78,10 +78,14 @@ def pad_to(x: torch.Tensor, factor: int) -> tuple[torch.Tensor, int, int]:
     return F.pad(x, (0, pad_w, 0, pad_h), mode="reflect"), height + pad_h, width + pad_w
 
 
-def metric_pair(pred: torch.Tensor, label: torch.Tensor) -> tuple[float, float]:
+def metric_pair(
+    pred: torch.Tensor,
+    label: torch.Tensor,
+    ssim_reference_size: tuple[int, int] | None = None,
+) -> tuple[float, float]:
     mse = F.mse_loss(pred, label).clamp_min(1e-12)
     psnr = float((10.0 * torch.log10(1.0 / mse)).item())
-    _, _, height, width = pred.shape
+    height, width = ssim_reference_size or tuple(pred.shape[-2:])
     down = max(1, round(min(height, width) / 256))
     target_size = (max(1, height // down), max(1, width // down))
     score = ssim(
@@ -91,6 +95,16 @@ def metric_pair(pred: torch.Tensor, label: torch.Tensor) -> tuple[float, float]:
         size_average=False,
     ).mean()
     return psnr, float(score.item())
+
+
+def padded_size(size: tuple[int, int], factor: int) -> tuple[int, int]:
+    height, width = size
+    if factor <= 0:
+        return height, width
+    return (
+        height + (factor - height % factor) % factor,
+        width + (factor - width % factor) % factor,
+    )
 
 
 def image_files(directory: Path) -> list[Path]:
@@ -354,7 +368,13 @@ def run_evaluation(args: argparse.Namespace) -> None:
         "tf32": False, "cudnn_benchmark": False, "cudnn_deterministic": True,
         "gt_border": args.gt_border, "resize_gt": args.resize_gt,
         "psnr_protocol": "mean per-image RGB float32 PSNR, native resolution, MSE floor 1e-12, data_range=1",
-        "ssim_protocol": "pytorch_msssim default Gaussian SSIM on adaptive_avg_pool2d to (h//d,w//d), d=max(1,round(min(h,w)/256)), RGB, data_range=1",
+        "ssim_protocol": (
+            "pytorch_msssim default Gaussian RGB SSIM after adaptive pooling; candidate reference canvas is input padded to factor "
+            f"{args.ssim_reference_factor}, reproducing the historical Haze4K v2.10 grid convention"
+            if args.ssim_reference_factor
+            else "pytorch_msssim default Gaussian SSIM on adaptive_avg_pool2d to (h//d,w//d), d=max(1,round(min(h,w)/256)), RGB, data_range=1"
+        ),
+        "ssim_reference_factor": args.ssim_reference_factor,
         "inference_protocol": "FP32, batch=1, no TTA/tiling; reflect-pad ConvIR to 32 and WDMamba to 4, crop to input size; clamp both outputs to [0,1] before blending",
         "selection_policy": "fixed prespecified alpha grid; no training or checkpoint/alpha selection on SOTS; grid maxima descriptive only",
         "a0_checkpoint": str(args.a0_checkpoint), "a0_sha256": sha256(args.a0_checkpoint),
@@ -384,8 +404,11 @@ def run_evaluation(args: argparse.Namespace) -> None:
         with torch.no_grad():
             a0_pred = infer_a0(a0, hazy)
             expert_pred = infer_wdmamba(wdmamba, hazy)
-        a0_psnr, a0_ssim = metric_pair(a0_pred, label)
-        expert_psnr, expert_ssim = metric_pair(expert_pred, label)
+        native_size = tuple(hazy.shape[-2:])
+        grid_ssim_size = padded_size(native_size, args.ssim_reference_factor)
+        expert_ssim_size = padded_size(native_size, 4) if args.ssim_reference_factor else native_size
+        a0_psnr, a0_ssim = metric_pair(a0_pred, label, grid_ssim_size)
+        expert_psnr, expert_ssim = metric_pair(expert_pred, label, expert_ssim_size)
         row: dict[str, Any] = {
             "image_id": input_path.stem,
             "input": str(input_path),
@@ -407,11 +430,11 @@ def run_evaluation(args: argparse.Namespace) -> None:
             key = alpha_key(alpha)
             if alpha == 0.0:
                 prediction, psnr, score = a0_pred, a0_psnr, a0_ssim
-            elif alpha == 1.0:
+            elif alpha == 1.0 and grid_ssim_size == expert_ssim_size:
                 prediction, psnr, score = expert_pred, expert_psnr, expert_ssim
             else:
                 prediction = torch.clamp(a0_pred + alpha * (expert_pred - a0_pred), 0, 1)
-                psnr, score = metric_pair(prediction, label)
+                psnr, score = metric_pair(prediction, label, grid_ssim_size)
             if not math.isfinite(psnr) or not math.isfinite(score):
                 raise FloatingPointError(f"non-finite metric: {input_path.name} alpha={alpha}")
             row[f"alpha_{key}_PSNR"] = psnr
@@ -472,6 +495,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-images", type=int, default=0)
     parser.add_argument("--expected-count", type=int, default=0, help="require this many pairs before applying max-images")
     parser.add_argument("--gt-border", type=int, default=0, help="crop this many pixels from each GT edge; use 10 for original SOTS Indoor")
+    parser.add_argument(
+        "--ssim-reference-factor",
+        type=int,
+        default=0,
+        help="derive the SSIM pooling grid from input padded to this factor; use 32 for historical Haze4K v2.10 parity",
+    )
     parser.add_argument("--print-freq", type=int, default=10)
     parser.add_argument("--device", default="")
     parser.add_argument("--save-images", action="store_true")

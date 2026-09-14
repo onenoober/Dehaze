@@ -68,6 +68,11 @@ For complete SOTS Indoor/Outdoor runs, use `tools/run_sots.sh` and follow
 `--gt-border 10`; do not resize its GT. The launcher captures logs and commands,
 requires all 500 source pairs, and refuses to overwrite an existing run.
 
+To reproduce the historical 1,000-image Haze4K test alpha grid, use
+`tools/run_haze4k.sh`. It selects the original Haze4K checkpoints and explicitly
+enables the v2.10-compatible 32-grid SSIM convention; the evaluator's default
+native-size SSIM remains unchanged for other datasets.
+
 See [docs/ROUTE.md](docs/ROUTE.md) for the staged experiment design and
 [docs/LEGACY_RESULTS.md](docs/LEGACY_RESULTS.md) for the reusable historical
 evidence.
