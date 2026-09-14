@@ -16,6 +16,7 @@ paths and hashes.
 
 ```text
 configs/              Cloud resource and route configuration
+assets/               Cloud-only dataset/checkpoint symlink manifest
 docs/                 Route design and imported historical results
 src/dehaze/           Reusable mixture code
 tools/                Environment and asset checks
@@ -27,6 +28,7 @@ The clean cloud workspace is:
 ```text
 /sda/home/wangyuxin/Dehaze/
   repo/                Git checkout
+  assets/              Read-only links to datasets and checkpoints
   runs/                One directory per experiment run
   cache/               Regenerable local cache
   logs/                Operational logs
@@ -47,14 +49,14 @@ writes one immutable run directory. For Haze4K, the default `test/haze` and
 ```bash
 /sda/home/wangyuxin/ConvIR-B/envs/convir-cu121/bin/python \
   tools/evaluate_wdmamba.py \
-  --data-root /sda/home/wangyuxin/ConvIR-B/datasets/Haze4K/Haze4K \
+  --data-root /sda/home/wangyuxin/Dehaze/assets/datasets/Haze4K \
   --split test \
   --out-dir /sda/home/wangyuxin/Dehaze/runs/wdmamba-haze4k-test-YYYYMMDD \
   --convir-its-dir /sda/home/wangyuxin/ConvIR-B/repos/ConvIR-B-official-arch-anchor/Dehazing/ITS \
   --convir-dataset Haze4K \
-  --a0-checkpoint /sda/home/wangyuxin/ConvIR-B/checkpoints/official/Haze4K/haze4k-base.pkl \
+  --a0-checkpoint /sda/home/wangyuxin/Dehaze/assets/checkpoints/convir/haze4k-base.pkl \
   --wdmamba-repo /sda/home/wangyuxin/ConvIR-B/repos/external_experts/WDMamba \
-  --wdmamba-checkpoint /sda/home/wangyuxin/ConvIR-B/checkpoints/WDMamba_ckpts/haze4k_35.88.pth \
+  --wdmamba-checkpoint /sda/home/wangyuxin/Dehaze/assets/checkpoints/wdmamba/haze4k_35.88.pth \
   --dataset-name Haze4K \
   --save-images
 ```
@@ -62,6 +64,11 @@ writes one immutable run directory. For Haze4K, the default `test/haze` and
 For RESIDE or NH-HAZE, pass `--input-dir` and `--gt-dir` explicitly when the
 dataset uses a flat or symlinked layout. `--max-images 1` is useful for a
 cloud smoke check before a full run.
+
+The asset links and their source paths, sizes, and SHA-256 values are recorded
+in `assets/manifest.json` on the cloud workspace. Dense-Haze now includes both
+the ConvIR-B and WDMamba checkpoints; DNH-HAZE 2024 remains intentionally
+unlisted until a dataset and model-specific checkpoints are acquired.
 
 For complete SOTS Indoor/Outdoor runs, use `tools/run_sots.sh` and follow
 [docs/SOTS_PROTOCOL.md](docs/SOTS_PROTOCOL.md). Original SOTS Indoor requires

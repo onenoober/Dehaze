@@ -12,7 +12,7 @@
     {
       "id": "sots",
       "kind": "directory",
-      "path": "/sda/home/wangyuxin/ConvIR-B/datasets/RESIDE/official/SOTS",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/datasets/RESIDE/SOTS",
       "required": true
     },
     {
@@ -24,7 +24,25 @@
     {
       "id": "haze4k",
       "kind": "directory",
-      "path": "/sda/home/wangyuxin/ConvIR-B/datasets/Haze4K/Haze4K",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/datasets/Haze4K",
+      "required": true
+    },
+    {
+      "id": "nh_haze",
+      "kind": "directory",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/datasets/NH-HAZE",
+      "required": true
+    },
+    {
+      "id": "dense_haze",
+      "kind": "directory",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/datasets/Dense-Haze",
+      "required": true
+    },
+    {
+      "id": "o_haze",
+      "kind": "directory",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/datasets/O-HAZE",
       "required": true
     },
     {
@@ -55,22 +73,22 @@
   "checkpoints": [
     {
       "id": "convir_its",
-      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/official/its-base.pkl",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/convir/its-base.pkl",
       "sha256": "0c71389bb8e4a602e4548e90c0015941b78698dfbfdd6ddfd46cdd2f61cd1fbd"
     },
     {
       "id": "convir_ots",
-      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/official/ots-base.pkl",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/convir/ots-base.pkl",
       "sha256": "dc28713ad92af0a2594b1964451602614e1b24a1e898647a6cf41c94e9e533e6"
     },
     {
       "id": "convir_a0_haze4k",
-      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/official/Haze4K/haze4k-base.pkl",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/convir/haze4k-base.pkl",
       "sha256": "6f42037d57a4e3de3a10ac0ab909d66a3415864a19433c29204a975f4efa4088"
     },
     {
       "id": "wdmamba_haze4k",
-      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/WDMamba_ckpts/haze4k_35.88.pth",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/wdmamba/haze4k_35.88.pth",
       "sha256": "57ff24c3791e593f0172607fea66252a8ba5475ab0e417f4cf48e72b4c9a36da"
     },
     {
@@ -79,13 +97,43 @@
       "sha256": "9dc852540db5c1d2b04cfa689acda994d4dcf3e2cbb820a5da49db1ba4073a35"
     },
     {
+      "id": "convir_densehaze",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/convir/densehaze-base.pkl",
+      "sha256": "9efb59941f77575402224ab752d054112a9b52a8605d3793584d6ce224083d4f"
+    },
+    {
+      "id": "convir_nhhaze",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/convir/nhhaze-base.pkl",
+      "sha256": "aab6a72613781900a23c3922ad2dd60f6b0d563018e33ae75162bcf3338f5bac"
+    },
+    {
+      "id": "convir_ohaze",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/convir/ohaze-base.pkl",
+      "sha256": "7e195acce33eca941a7997a2a8988b6b0c401e7eff83a654431f61716672212f"
+    },
+    {
+      "id": "wdmamba_densehaze",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/wdmamba/Dense_17.52.pth",
+      "sha256": "0754cb37dcb0133ce5fc07c11bf0224ca878cc1bfb338ce90116baa662eb9308"
+    },
+    {
+      "id": "wdmamba_nhhaze",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/wdmamba/NH_20.83.pth",
+      "sha256": "e097524f466b24f32843867911f9cbd47be8d51e61e5e345f8a27c22c73d5c5a"
+    },
+    {
+      "id": "wdmamba_ohaze",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/wdmamba/Ohaze_1200_1600_27.22.pth",
+      "sha256": "6cbd4ba7eda46edcc7eb8446c569436cb46e57d52224d1dd52052b9834f43132"
+    },
+    {
       "id": "fsnet_udp_haze4k",
-      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/udpnet/FSNet_UDPNet_haze4k.ckpt",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/optional/FSNet_UDPNet_haze4k.ckpt",
       "sha256": "25cc334f44c2fac979baad7f158526c9f8d751c21ea282974b0e4d9791fc0a27"
     },
     {
       "id": "mb_taylor_v2_l_haze4k",
-      "path": "/sda/home/wangyuxin/ConvIR-B/checkpoints/mb-taylorformerv2/HAZE4K-L.pth",
+      "path": "/sda/home/wangyuxin/Dehaze/assets/checkpoints/optional/HAZE4K-L.pth",
       "sha256": "954229a6862cd7058c8769a9362a88f9ef2ef132664a1b05e7f7f204b617f2f9"
     }
   ],
