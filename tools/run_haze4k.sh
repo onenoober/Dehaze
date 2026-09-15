@@ -5,6 +5,7 @@ gpu=${1:?usage: bash tools/run_haze4k.sh GPU NEW_RUN_ROOT [MAX_IMAGES] [SAVE_IMA
 run_root=${2:?missing new run root}
 max_images=${3:-0}
 save_images=${4:-0}
+save_profiles=${SAVE_PROFILES:-}
 case "$run_root" in
   /sda/home/wangyuxin/Dehaze/runs/*) ;;
   *) printf 'Run root must be below /sda/home/wangyuxin/Dehaze/runs/\n' >&2; exit 2 ;;
@@ -37,7 +38,13 @@ command=("$runtime" "$repo/tools/evaluate_wdmamba.py"
   --wdmamba-checkpoint "$assets/checkpoints/WDMamba_ckpts/haze4k_35.88.pth"
   --alphas 0 0.125 0.25 0.375 0.5 0.75 1 --ssim-reference-factor 32 --numerics historical
   --device cuda:0 --print-freq 20)
-if test "$save_images" = 1; then command+=(--save-images); fi
+if test "$save_images" = 1; then
+  command+=(--save-images)
+  if test -n "$save_profiles"; then
+    read -r -a profile_args <<< "$save_profiles"
+    command+=(--save-profiles "${profile_args[@]}")
+  fi
+fi
 printf '#!/usr/bin/env bash\nset -euo pipefail\nexport CUDA_VISIBLE_DEVICES=%q OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONUNBUFFERED=1\n' "$gpu" > "$run_root/command.sh"
 printf '%q ' "${command[@]}" >> "$run_root/command.sh"
 printf '\n' >> "$run_root/command.sh"
