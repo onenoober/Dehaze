@@ -376,6 +376,36 @@ def infer_wdmamba(model: Any, image: torch.Tensor) -> torch.Tensor:
     return torch.clamp(output[:, :, :height, :width], 0, 1)
 
 
+def infer_wdmamba_tiled(model: Any, image: torch.Tensor, tile_size: int, tile_pad: int) -> torch.Tensor:
+    """Run WDMamba on overlapping tiles for high-resolution export fallback."""
+    _, _, height, width = image.shape
+    output = torch.zeros_like(image)
+    weights = torch.zeros((1, 1, height, width), dtype=image.dtype, device=image.device)
+
+    def starts(length: int) -> list[int]:
+        if length <= tile_size:
+            return [0]
+        values = list(range(0, length - tile_size + 1, tile_size))
+        if values[-1] != length - tile_size:
+            values.append(length - tile_size)
+        return values
+
+    for top in starts(height):
+        bottom = top + min(tile_size, height)
+        for left in starts(width):
+            right = left + min(tile_size, width)
+            top_pad = max(0, top - tile_pad)
+            bottom_pad = min(height, bottom + tile_pad)
+            left_pad = max(0, left - tile_pad)
+            right_pad = min(width, right + tile_pad)
+            tile = image[:, :, top_pad:bottom_pad, left_pad:right_pad]
+            tile_output = infer_wdmamba(model, tile)
+            core = tile_output[:, :, top - top_pad:bottom - top_pad, left - left_pad:right - left_pad]
+            output[:, :, top:bottom, left:right] += core
+            weights[:, :, top:bottom, left:right] += 1
+    return output / weights.clamp_min(1)
+
+
 def save_image(tensor: torch.Tensor, path: Path) -> None:
     array = (tensor.squeeze(0).detach().cpu().clamp(0, 1).permute(1, 2, 0).numpy() * 255.0).round().astype("uint8")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -453,11 +483,13 @@ def run_evaluation(args: argparse.Namespace) -> None:
         "inference_protocol": (
             "FP32, batch=1, no TTA; "
             + (f"ConvIR overlap tiles of {args.a0_tile_size} with pad {args.a0_tile_pad}; " if args.a0_tile_size else "no ConvIR tiling; ")
-            + "reflect-pad ConvIR tiles to 32 and WDMamba to 4, crop to input size; clamp both outputs to [0,1] before blending"
+            + (f"WDMamba overlap tiles of {args.wdmamba_tile_size} with pad {args.wdmamba_tile_pad}; " if args.wdmamba_tile_size else "whole-image WDMamba; ")
+            + "reflect-pad ConvIR tiles to 32 and WDMamba tiles/images to 4, crop to input size; clamp both outputs to [0,1] before blending"
         ),
         "a0_tiling": {"enabled": args.a0_tile_size > 0, "tile_size": args.a0_tile_size, "tile_pad": args.a0_tile_pad},
+        "wdmamba_tiling": {"enabled": args.wdmamba_tile_size > 0, "tile_size": args.wdmamba_tile_size, "tile_pad": args.wdmamba_tile_pad},
         "sequential_model_offload": args.sequential_models,
-        "selection_policy": "fixed prespecified alpha grid; no training or checkpoint/alpha selection on SOTS; grid maxima descriptive only",
+        "selection_policy": "fixed prespecified alpha grid; image-export profiles are selected from archived aggregate metrics only; no training or checkpoint selection",
         "a0_checkpoint": str(args.a0_checkpoint), "a0_sha256": sha256(args.a0_checkpoint),
         "wdmamba_checkpoint": str(args.wdmamba_checkpoint), "wdmamba_sha256": sha256(args.wdmamba_checkpoint),
         "convir_dataset": args.convir_dataset, "convir_its_dir": str(args.convir_its_dir),
@@ -489,7 +521,11 @@ def run_evaluation(args: argparse.Namespace) -> None:
                 a0.to("cpu")
                 if device.type == "cuda":
                     torch.cuda.empty_cache()
-            expert_pred = infer_wdmamba(wdmamba, hazy)
+            expert_pred = (
+                infer_wdmamba_tiled(wdmamba, hazy, args.wdmamba_tile_size, args.wdmamba_tile_pad)
+                if args.wdmamba_tile_size
+                else infer_wdmamba(wdmamba, hazy)
+            )
             if args.sequential_models:
                 a0.to(device)
         native_size = tuple(hazy.shape[-2:])
@@ -551,8 +587,12 @@ def evaluate(args: argparse.Namespace) -> None:
     args.a0_tile_size = getattr(args, "a0_tile_size", 0)
     args.a0_tile_pad = getattr(args, "a0_tile_pad", 64)
     args.sequential_models = getattr(args, "sequential_models", False)
+    args.wdmamba_tile_size = getattr(args, "wdmamba_tile_size", 0)
+    args.wdmamba_tile_pad = getattr(args, "wdmamba_tile_pad", 64)
     if args.a0_tile_size < 0 or args.a0_tile_pad < 0 or (args.a0_tile_size and args.a0_tile_size < 128):
         raise ValueError("invalid ConvIR tile size or pad")
+    if args.wdmamba_tile_size < 0 or args.wdmamba_tile_pad < 0 or (args.wdmamba_tile_size and args.wdmamba_tile_size < 128):
+        raise ValueError("invalid WDMamba tile size or pad")
     if any(not math.isfinite(a) or not 0 <= a <= 1 for a in args.alphas):
         raise ValueError("alpha grid must contain finite values in [0,1]")
     args.out_dir.mkdir(parents=True, exist_ok=False)
@@ -618,6 +658,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--sequential-models",
         action="store_true",
         help="temporarily offload ConvIR to CPU between ConvIR and WDMamba inference to reduce peak GPU memory",
+    )
+    parser.add_argument(
+        "--wdmamba-tile-size",
+        type=int,
+        default=0,
+        help="tile WDMamba inference at this core size; 0 keeps whole-image inference",
+    )
+    parser.add_argument(
+        "--wdmamba-tile-pad",
+        type=int,
+        default=64,
+        help="overlap context around each WDMamba tile when --wdmamba-tile-size is enabled",
     )
     parser.add_argument("--save-images", action="store_true")
     parser.add_argument(

@@ -6,7 +6,9 @@ Run date: 2026-09-14 (Asia/Shanghai). The fixed candidate grid was
 after looking at these test results.
 
 The three evaluations use the dataset-specific ConvIR-B and WDMamba
-checkpoints already registered in the clean Dehaze route. Metrics are mean
+checkpoints already registered in the clean Dehaze route. The NH-HAZE formal
+test is the official `51-55` subset; its earlier 55-image run is retained only
+as a split-mixed diagnostic. Metrics are mean
 per-image RGB float32 PSNR and the evaluator's pooled `pytorch_msssim` SSIM;
 delta is relative to the matching ConvIR-B A0 checkpoint.
 
@@ -14,13 +16,13 @@ delta is relative to the matching ConvIR-B A0 checkpoint.
 
 | Dataset | Profile | Count | PSNR (dB) | SSIM | Delta PSNR (dB) | Positive ratio | Severe loss (<= -0.20 dB) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| NH-HAZE | A0 | 55 | 26.1048 | 0.929610 | 0.0000 | 0.000 | 0 |
-| NH-HAZE | alpha=.125 | 55 | 26.1911 | 0.929864 | +0.0863 | 0.782 | 0 |
-| NH-HAZE | alpha=.25 | 55 | 26.1443 | 0.927894 | +0.0395 | 0.509 | 8 |
-| NH-HAZE | **WD0375** | 55 | 25.9712 | 0.923624 | **-0.1336** | 0.309 | 26 |
-| NH-HAZE | alpha=.5 | 55 | 25.6887 | 0.917005 | -0.4161 | 0.164 | 38 |
-| NH-HAZE | alpha=.75 | 55 | 24.8859 | 0.896841 | -1.2189 | 0.055 | 48 |
-| NH-HAZE | WDMamba | 55 | 23.9069 | 0.868427 | -2.1979 | 0.055 | 52 |
+| NH-HAZE (official test 51-55) | A0 | 5 | 20.6636 | 0.796807 | 0.0000 | 0.000 | 0 |
+| NH-HAZE (official test 51-55) | alpha=.125 | 5 | 20.8883 | 0.805705 | +0.2248 | 1.000 | 0 |
+| NH-HAZE (official test 51-55) | alpha=.25 | 5 | 21.0624 | 0.813094 | +0.3988 | 1.000 | 0 |
+| NH-HAZE (official test 51-55) | **WD0375** | 5 | 21.1794 | 0.818843 | **+0.5158** | 1.000 | 0 |
+| NH-HAZE (official test 51-55) | **alpha=.5 (grid best PSNR)** | 5 | **21.2349** | 0.822814 | **+0.5713** | 0.800 | 0 |
+| NH-HAZE (official test 51-55) | alpha=.75 | 5 | 21.1540 | 0.824867 | +0.4904 | 0.600 | 1 |
+| NH-HAZE (official test 51-55) | WDMamba | 5 | 20.8306 | 0.818217 | +0.1671 | 0.600 | 2 |
 | Dense-Haze | A0 | 55 | 22.7525 | 0.801035 | 0.0000 | 0.000 | 0 |
 | Dense-Haze | alpha=.125 | 55 | 23.0213 | 0.806165 | +0.2688 | 0.964 | 0 |
 | Dense-Haze | alpha=.25 | 55 | 23.1767 | 0.808038 | +0.4242 | 0.927 | 2 |
@@ -41,15 +43,16 @@ delta is relative to the matching ConvIR-B A0 checkpoint.
 - The fixed WD0375 profile transfers positively to Dense-Haze (`+0.4554 dB`),
   but is below the ConvIR baseline on NH-HAZE (`-0.1336 dB`) and O-HAZE
   (`-0.0544 dB`). It is therefore not a universal real-haze default.
-- The most favorable fixed grid point is dataset-dependent: NH-HAZE and
-  O-HAZE peak at alpha=.125, while Dense-Haze peaks at WD0375. These maxima
+- The most favorable fixed grid point is dataset-dependent: official NH-HAZE
+  peaks at alpha=.5, O-HAZE peaks at alpha=.125, while Dense-Haze peaks at
+  WD0375. These maxima
   are descriptive test-grid summaries, not post-test tuning evidence.
 - WDMamba alone is below the corresponding ConvIR checkpoint on all three
   datasets. Residual shrinkage is materially safer than alpha=1 here.
 
 ## Protocol And O-HAZE Capacity Note
 
-NH-HAZE and Dense-Haze use strict FP32, batch 1, whole-image inference with
+The official NH-HAZE subset (51-55) and Dense-Haze use strict FP32, batch 1, whole-image inference with
 reflect padding to ConvIR factor 32 and WDMamba factor 4. O-HAZE contains
 original high-resolution files (roughly 2.6k-5.5k pixels on an edge), so the
 ConvIR whole-image `unfold` path exceeds 24 GiB on the RTX 4090. O-HAZE was
@@ -72,8 +75,9 @@ not overwritten.
 | Dense-Haze | `/sda/home/wangyuxin/Dehaze/runs/densehaze-full-57b822d-20260914` | `densehaze/alpha_grid.csv`, `densehaze/manifest.json`, `densehaze/audit.json` |
 | O-HAZE | `/sda/home/wangyuxin/Dehaze/runs/ohaze-full-tile-4d5c986-20260914` | `ohaze/alpha_grid.csv`, `ohaze/manifest.json`, `ohaze/audit.json` |
 
-The cloud post-run audit passed for every dataset: 55/55, 55/55, and 45/45
-paired rows respectively; 7/7 alpha rows each; finite numeric fields; and
+The cloud post-run audit passed for every dataset: 5/5 official NH-HAZE test
+rows, 55/55 Dense-Haze rows, and 45/45 O-HAZE rows; 7/7 alpha rows each;
+finite numeric fields; and
 `DEHAZE_REAL_DATASET_RUN_OK` plus `DEHAZE_WDMAMBA_EVAL_OK` status markers.
 Per-image CSVs remain on the cloud runtime and are identified by SHA-256 in
 the corresponding audit files.
