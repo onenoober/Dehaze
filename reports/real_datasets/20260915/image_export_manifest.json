@@ -1,0 +1,54 @@
+{
+  "export_date": "2026-09-15",
+  "selection_basis": "archived aggregate PSNR from the fixed alpha grid",
+  "exports": [
+    {
+      "dataset": "Haze4K",
+      "split": "test",
+      "profiles": ["alpha0.75", "WD0375"],
+      "count_per_profile": 1000,
+      "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/haze4k-best-images-0302705-20260915",
+      "protocol": "historical full-image evaluator"
+    },
+    {
+      "dataset": "SOTS",
+      "split": "indoor",
+      "profiles": ["A0", "alpha0.125", "alpha0.25", "WD0375", "alpha0.5", "alpha0.75", "WDMamba"],
+      "count_per_profile": 500,
+      "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/sots-indoor-full-eacd5db-20260914",
+      "protocol": "existing complete export"
+    },
+    {
+      "dataset": "SOTS",
+      "split": "outdoor",
+      "profiles": ["A0", "alpha0.125", "alpha0.25", "WD0375", "alpha0.5", "alpha0.75", "WDMamba"],
+      "count_per_profile": 500,
+      "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/sots-outdoor-full-eacd5db-20260914",
+      "protocol": "existing complete export"
+    },
+    {
+      "dataset": "NH-HAZE",
+      "split": "official test 51-55",
+      "profiles": ["alpha0.5", "WD0375"],
+      "count_per_profile": 5,
+      "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/nhhaze-best-images-official-f4f9c05-20260915",
+      "protocol": "strict FP32, whole-image"
+    },
+    {
+      "dataset": "Dense-Haze",
+      "split": "test",
+      "profiles": ["WD0375"],
+      "count_per_profile": 55,
+      "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/densehaze-best-images-f4f9c05-20260915",
+      "protocol": "strict FP32, whole-image"
+    },
+    {
+      "dataset": "O-HAZE",
+      "split": "test",
+      "profiles": ["alpha0.125", "WD0375"],
+      "count_per_profile": 45,
+      "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/ohaze-best-images-wdmamba-tile-fallback-54ff735-20260915",
+      "protocol": "ConvIR overlap tile 1024/64 and WDMamba overlap tile 1024/64 fallback"
+    }
+  ]
+}
