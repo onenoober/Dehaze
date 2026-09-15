@@ -7,6 +7,7 @@ run_root=${3:?missing new run root}
 max_images=${4:-0}
 a0_tile_size=${5:-0}
 a0_tile_pad=${6:-64}
+save_profiles=${SAVE_PROFILES:-}
 case "$run_root" in
   /sda/home/wangyuxin/Dehaze/runs/*) ;;
   *) printf 'Run root must be below /sda/home/wangyuxin/Dehaze/runs/\n' >&2; exit 2 ;;
@@ -78,6 +79,10 @@ command=("$runtime" "$repo/tools/evaluate_wdmamba.py"
   --alphas 0 0.125 0.25 0.375 0.5 0.75 1 --device cuda:0 --print-freq 1)
 if test "$a0_tile_size" -gt 0; then
   command+=(--a0-tile-size "$a0_tile_size" --a0-tile-pad "$a0_tile_pad")
+fi
+if test -n "$save_profiles"; then
+  read -r -a profile_args <<< "$save_profiles"
+  command+=(--save-images --save-profiles "${profile_args[@]}")
 fi
 printf '#!/usr/bin/env bash\nset -euo pipefail\nexport CUDA_VISIBLE_DEVICES=%q OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONUNBUFFERED=1 PYTORCH_CUDA_ALLOC_CONF=%q\n' "$gpu" "${PYTORCH_CUDA_ALLOC_CONF:-}" > "$run_root/command.sh"
 printf '%q ' "${command[@]}" >> "$run_root/command.sh"

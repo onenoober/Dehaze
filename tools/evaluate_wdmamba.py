@@ -58,6 +58,28 @@ def alpha_label(alpha: float) -> str:
     return f"alpha{alpha:g}"
 
 
+def parse_save_profiles(values: list[str] | None, alphas: list[float], save_images: bool) -> set[float]:
+    """Resolve requested image profiles to the evaluator's numeric alpha grid."""
+    if not save_images:
+        return set()
+    if not values:
+        return set(alphas)
+    resolved: set[float] = set()
+    labels = {alpha_label(alpha).lower(): alpha for alpha in alphas}
+    labels.update({alpha_key(alpha).lower(): alpha for alpha in alphas})
+    for value in values:
+        token = value.strip().lower()
+        try:
+            alpha = round(float(token), 6)
+        except ValueError:
+            alpha = labels.get(token, -1.0)
+        if alpha not in alphas:
+            available = ", ".join(alpha_label(alpha) for alpha in alphas)
+            raise ValueError(f"save profile {value!r} is not in alpha grid; available: {available}")
+        resolved.add(alpha)
+    return resolved
+
+
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fields: list[str] = []
@@ -403,6 +425,7 @@ def run_evaluation(args: argparse.Namespace) -> None:
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cudnn.allow_tf32 = False
     alphas = sorted({round(float(value), 6) for value in args.alphas})
+    save_profiles = parse_save_profiles(args.save_profiles, alphas, args.save_images)
     manifest = {
         "state": "MODEL_LOADING", "mode": "evaluate", "dataset": args.dataset_name,
         "split": args.split, "input_dir": str(input_dir), "gt_dir": str(gt_dir),
@@ -441,6 +464,7 @@ def run_evaluation(args: argparse.Namespace) -> None:
         "evaluator_sha256": sha256(Path(__file__)),
         "pairs_csv_sha256": sha256(output_root / "metrics" / "pairs.csv"),
         "argv": sys.argv, "save_images": args.save_images,
+        "save_profiles": [alpha_label(alpha) for alpha in sorted(save_profiles)],
     }
     write_json(output_root / "manifest.json", manifest)
     (output_root / "status.txt").write_text("MODEL_LOADING\n", encoding="utf-8")
@@ -496,7 +520,7 @@ def run_evaluation(args: argparse.Namespace) -> None:
             row[f"alpha_{key}_SSIM"] = score
             row[f"alpha_{key}_dPSNR"] = psnr - a0_psnr
             row[f"alpha_{key}_dSSIM"] = score - a0_ssim
-            if args.save_images:
+            if alpha in save_profiles:
                 save_image(prediction, output_root / "images" / alpha_label(alpha) / f"{input_path.stem}.png")
         rows.append(row)
         (output_root / "status.txt").write_text(f"EVALUATING progress={index}/{len(pairs)} elapsed={time.time()-started:.1f}s\n", encoding="utf-8")
@@ -581,6 +605,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="overlap context around each ConvIR tile when --a0-tile-size is enabled",
     )
     parser.add_argument("--save-images", action="store_true")
+    parser.add_argument(
+        "--save-profiles",
+        nargs="+",
+        default=None,
+        metavar="PROFILE",
+        help="profiles to save when --save-images is set (labels such as WD0375/A0/WDMamba or numeric alphas); default: all",
+    )
     parser.add_argument(
         "--resize-gt",
         action="store_true",
