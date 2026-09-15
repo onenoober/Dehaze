@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Evaluate one paired real-haze dataset on convir-4090.
+# Set SAVE_PROFILES="alpha=.5 WD0375" to save only selected profiles.
+# Set NH_TEST_IDS="51 52 53 54 55" for the official NH-HAZE test subset.
 set -euo pipefail
 dataset=${1:?usage: bash tools/run_real_dataset.sh DATASET GPU NEW_RUN_ROOT [MAX_IMAGES] [A0_TILE_SIZE] [A0_TILE_PAD]}
 gpu=${2:?missing GPU}
@@ -8,6 +10,7 @@ max_images=${4:-0}
 a0_tile_size=${5:-0}
 a0_tile_pad=${6:-64}
 save_profiles=${SAVE_PROFILES:-}
+nh_test_ids=${NH_TEST_IDS:-}
 case "$run_root" in
   /sda/home/wangyuxin/Dehaze/runs/*) ;;
   *) printf 'Run root must be below /sda/home/wangyuxin/Dehaze/runs/\n' >&2; exit 2 ;;
@@ -48,7 +51,19 @@ if test "$flat" = 1; then
   gt_dir=$run_root/gt
   mkdir -p "$input_dir" "$gt_dir"
   shopt -s nullglob
-  for input in "$source_root"/*_hazy.*; do
+  inputs=()
+  if test -n "$nh_test_ids"; then
+    read -r -a requested_ids <<< "$nh_test_ids"
+    for id in "${requested_ids[@]}"; do
+      matches=("$source_root/${id}_hazy."*)
+      test "${#matches[@]}" -eq 1
+      inputs+=("${matches[0]}")
+    done
+    expected=${#inputs[@]}
+  else
+    inputs=("$source_root"/*_hazy.*)
+  fi
+  for input in "${inputs[@]}"; do
     name=$(basename -- "$input")
     stem=${name%.*}; suffix=${name##*.}
     ln -s -- "$input" "$input_dir/$name"
