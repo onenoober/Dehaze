@@ -456,6 +456,7 @@ def run_evaluation(args: argparse.Namespace) -> None:
             + "reflect-pad ConvIR tiles to 32 and WDMamba to 4, crop to input size; clamp both outputs to [0,1] before blending"
         ),
         "a0_tiling": {"enabled": args.a0_tile_size > 0, "tile_size": args.a0_tile_size, "tile_pad": args.a0_tile_pad},
+        "sequential_model_offload": args.sequential_models,
         "selection_policy": "fixed prespecified alpha grid; no training or checkpoint/alpha selection on SOTS; grid maxima descriptive only",
         "a0_checkpoint": str(args.a0_checkpoint), "a0_sha256": sha256(args.a0_checkpoint),
         "wdmamba_checkpoint": str(args.wdmamba_checkpoint), "wdmamba_sha256": sha256(args.wdmamba_checkpoint),
@@ -484,7 +485,13 @@ def run_evaluation(args: argparse.Namespace) -> None:
         label = align_gt(label, tuple(hazy.shape[-2:]), args.gt_border, args.resize_gt)
         with torch.no_grad():
             a0_pred = infer_a0_tiled(a0, hazy, args.a0_tile_size, args.a0_tile_pad)
+            if args.sequential_models:
+                a0.to("cpu")
+                if device.type == "cuda":
+                    torch.cuda.empty_cache()
             expert_pred = infer_wdmamba(wdmamba, hazy)
+            if args.sequential_models:
+                a0.to(device)
         native_size = tuple(hazy.shape[-2:])
         grid_ssim_size = padded_size(native_size, args.ssim_reference_factor)
         expert_ssim_size = padded_size(native_size, 4) if args.ssim_reference_factor else native_size
@@ -543,6 +550,7 @@ def evaluate(args: argparse.Namespace) -> None:
         raise ValueError("invalid image count or print frequency")
     args.a0_tile_size = getattr(args, "a0_tile_size", 0)
     args.a0_tile_pad = getattr(args, "a0_tile_pad", 64)
+    args.sequential_models = getattr(args, "sequential_models", False)
     if args.a0_tile_size < 0 or args.a0_tile_pad < 0 or (args.a0_tile_size and args.a0_tile_size < 128):
         raise ValueError("invalid ConvIR tile size or pad")
     if any(not math.isfinite(a) or not 0 <= a <= 1 for a in args.alphas):
@@ -605,6 +613,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=64,
         help="overlap context around each ConvIR tile when --a0-tile-size is enabled",
+    )
+    parser.add_argument(
+        "--sequential-models",
+        action="store_true",
+        help="temporarily offload ConvIR to CPU between ConvIR and WDMamba inference to reduce peak GPU memory",
     )
     parser.add_argument("--save-images", action="store_true")
     parser.add_argument(

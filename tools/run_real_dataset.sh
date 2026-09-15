@@ -11,6 +11,7 @@ a0_tile_size=${5:-0}
 a0_tile_pad=${6:-64}
 save_profiles=${SAVE_PROFILES:-}
 nh_test_ids=${NH_TEST_IDS:-}
+sequential_models=${SEQUENTIAL_MODELS:-0}
 case "$run_root" in
   /sda/home/wangyuxin/Dehaze/runs/*) ;;
   *) printf 'Run root must be below /sda/home/wangyuxin/Dehaze/runs/\n' >&2; exit 2 ;;
@@ -98,6 +99,9 @@ fi
 if test -n "$save_profiles"; then
   read -r -a profile_args <<< "$save_profiles"
   command+=(--save-images --save-profiles "${profile_args[@]}")
+fi
+if test "$sequential_models" = 1; then
+  command+=(--sequential-models)
 fi
 printf '#!/usr/bin/env bash\nset -euo pipefail\nexport CUDA_VISIBLE_DEVICES=%q OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONUNBUFFERED=1 PYTORCH_CUDA_ALLOC_CONF=%q\n' "$gpu" "${PYTORCH_CUDA_ALLOC_CONF:-}" > "$run_root/command.sh"
 printf '%q ' "${command[@]}" >> "$run_root/command.sh"
