@@ -69,6 +69,8 @@ def parse_save_profiles(values: list[str] | None, alphas: list[float], save_imag
     labels.update({alpha_key(alpha).lower(): alpha for alpha in alphas})
     for value in values:
         token = value.strip().lower()
+        if token.startswith("alpha="):
+            token = token[6:]
         try:
             alpha = round(float(token), 6)
         except ValueError:
