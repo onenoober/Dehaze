@@ -25,3 +25,7 @@ are recorded in its `evaluation/manifest.json`.
 
 Only prediction PNGs are stored on the cloud runtime. Input images, GT images,
 weights, and raw inference artifacts are not copied into Git.
+
+Cloud evaluator manifests copied for audit are in `cloud_manifests/`; they
+record the exact source checkpoints, evaluator commit, alpha grid, selected
+profiles, split, and tiling/offload settings.

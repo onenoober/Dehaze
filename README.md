@@ -77,6 +77,8 @@ requires all 500 source pairs, and refuses to overwrite an existing run.
 
 The completed NH-HAZE, Dense-Haze, and O-HAZE alpha-grid results are archived
 in [reports/real_datasets/20260914/REAL_DATASET_RESULTS.md](reports/real_datasets/20260914/REAL_DATASET_RESULTS.md).
+The saved best-profile image locations and export audit are indexed in
+[reports/real_datasets/20260915/BEST_IMAGE_EXPORTS.md](reports/real_datasets/20260915/BEST_IMAGE_EXPORTS.md).
 O-HAZE's high-resolution source requires the evaluator's explicit ConvIR
 overlap-tile options (`--a0-tile-size 1024 --a0-tile-pad 64`); the default
 remains whole-image inference.

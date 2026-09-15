@@ -1,0 +1,40 @@
+{
+  "audit_date": "2026-09-15",
+  "status": "PASS",
+  "checks": {
+    "completed_manifest_count": 6,
+    "profile_directory_counts_match": true,
+    "sample_png_decode_rgb": true,
+    "cloud_status_markers_match": true
+  },
+  "counts": {
+    "haze4k": {"WD0375": 1000, "alpha0.75": 1000},
+    "sots_indoor": {"profiles": 7, "count_per_profile": 500, "total": 3500},
+    "sots_outdoor": {"profiles": 7, "count_per_profile": 500, "total": 3500},
+    "nhhaze_official_test": {"WD0375": 5, "alpha0.5": 5},
+    "densehaze": {"WD0375": 55},
+    "ohaze": {"WD0375": 45, "alpha0.125": 45}
+  },
+  "engineering_failures_retained": [
+    {
+      "run": "/sda/home/wangyuxin/Dehaze/runs/nhhaze-best-images-official-7f2c1e6-20260915",
+      "state": "FAILED_COMMAND",
+      "cause": "save profile parser did not initially accept alpha=.5 syntax"
+    },
+    {
+      "run": "/sda/home/wangyuxin/Dehaze/runs/ohaze-best-images-tile-f4f9c05-20260915",
+      "state": "FAILED_INFRA",
+      "cause": "whole-image WDMamba OOM with another process occupying GPU5"
+    },
+    {
+      "run": "/sda/home/wangyuxin/Dehaze/runs/ohaze-best-images-tile-r2-f4f9c05-20260915",
+      "state": "FAILED_INFRA",
+      "cause": "whole-image WDMamba OOM with another process occupying GPU5"
+    },
+    {
+      "run": "/sda/home/wangyuxin/Dehaze/runs/ohaze-best-images-tile-seq-dcf3c8d-20260915",
+      "state": "FAILED_INFRA",
+      "cause": "sequential ConvIR offload was insufficient for whole-image WDMamba under shared GPU pressure"
+    }
+  ]
+}
