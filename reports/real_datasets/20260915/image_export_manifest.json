@@ -8,6 +8,7 @@
       "profiles": ["alpha0.75", "WD0375"],
       "count_per_profile": 1000,
       "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/haze4k-best-images-0302705-20260915",
+      "source_metrics": "/sda/home/wangyuxin/Dehaze/runs/haze4k-full-r3-08374fa-20260914/evaluation/metrics/alpha_grid.csv",
       "protocol": "historical full-image evaluator"
     },
     {
@@ -16,6 +17,7 @@
       "profiles": ["A0", "alpha0.125", "alpha0.25", "WD0375", "alpha0.5", "alpha0.75", "WDMamba"],
       "count_per_profile": 500,
       "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/sots-indoor-full-eacd5db-20260914",
+      "source_metrics": "/sda/home/wangyuxin/Dehaze/runs/sots-indoor-full-eacd5db-20260914/evaluation/metrics/alpha_grid.csv",
       "protocol": "existing complete export"
     },
     {
@@ -24,6 +26,7 @@
       "profiles": ["A0", "alpha0.125", "alpha0.25", "WD0375", "alpha0.5", "alpha0.75", "WDMamba"],
       "count_per_profile": 500,
       "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/sots-outdoor-full-eacd5db-20260914",
+      "source_metrics": "/sda/home/wangyuxin/Dehaze/runs/sots-outdoor-full-eacd5db-20260914/evaluation/metrics/alpha_grid.csv",
       "protocol": "existing complete export"
     },
     {
@@ -32,6 +35,7 @@
       "profiles": ["alpha0.5", "WD0375"],
       "count_per_profile": 5,
       "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/nhhaze-best-images-official-f4f9c05-20260915",
+      "source_metrics": "/sda/home/wangyuxin/Dehaze/runs/nhhaze-full-57b822d-20260914/evaluation/metrics/per_image.csv (rows 51-55)",
       "protocol": "strict FP32, whole-image"
     },
     {
@@ -40,6 +44,7 @@
       "profiles": ["WD0375"],
       "count_per_profile": 55,
       "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/densehaze-best-images-f4f9c05-20260915",
+      "source_metrics": "/sda/home/wangyuxin/Dehaze/runs/densehaze-full-57b822d-20260914/evaluation/metrics/alpha_grid.csv",
       "protocol": "strict FP32, whole-image"
     },
     {
@@ -48,6 +53,7 @@
       "profiles": ["alpha0.125", "WD0375"],
       "count_per_profile": 45,
       "cloud_run": "/sda/home/wangyuxin/Dehaze/runs/ohaze-best-images-wdmamba-tile-fallback-54ff735-20260915",
+      "source_metrics": "/sda/home/wangyuxin/Dehaze/runs/ohaze-full-tile-4d5c986-20260914/evaluation/metrics/alpha_grid.csv",
       "protocol": "ConvIR overlap tile 1024/64 and WDMamba overlap tile 1024/64 fallback"
     }
   ]
